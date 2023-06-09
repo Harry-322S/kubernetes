@@ -1,0 +1,4 @@
+sudo apt-get install keepalived
+sudo systemctl daemon-reload
+sudo systemctl restart keepalived
+
