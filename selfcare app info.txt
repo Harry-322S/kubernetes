@@ -1,0 +1,4 @@
+7 web servers (112)
+14 app (104)
+4 integration
+2 database

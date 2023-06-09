@@ -1,0 +1,24 @@
+useradd lok && cd /home/lok
+
+openssl genrsa -out lok.key 2048
+
+openssl req -new -key lok.key \
+  -out lok.csr \
+  -subj "/CN=lok"
+
+openssl x509 -req -in lok.csr \
+  -CA /etc/kubernetes/pki/ca.crt \
+  -CAkey /etc/kubernetes/pki/ca.key \
+  -CAcreateserial \
+  -out lok.crt -days 500
+
+mkdir .certs && mv lok.crt lok.key .certs
+
+kubectl config set-credentials lok \
+  --client-certificate=/home/lok/.certs/lok.crt \
+  --client-key=/home/lok/.certs/lok.key
+
+
+
+kubectl config set-context lok-context \
+  --cluster=kubernetes --user=lok --namespace metro

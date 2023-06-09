@@ -1,0 +1,10 @@
+To check validity
+
+kubeadm certs check-expiration
+
+
+To renew the certs manually
+
+kubeadm certs renew all
+
+You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.

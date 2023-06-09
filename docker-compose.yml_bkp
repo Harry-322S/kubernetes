@@ -1,0 +1,114 @@
+version: '3.1'
+services:
+  mysql-server:    # The Postgres Database Service
+    image: mysql:8.0
+#    restart: always
+    environment:   # Username, password and database name variables
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: zabbix
+    volumes:
+     - /data/zabbix/mysql-data:/var/lib/mysql
+#     - /root/zabbix/mysql-data:/var/lib/mysql
+    command:
+     - mysqld
+     - --character-set-server=utf8
+     - --collation-server=utf8_bin
+     - --default-authentication-plugin=mysql_native_password
+  zabbix-server:     # The main Zabbix Server Software Service
+    image: zabbix/zabbix-server-mysql:alpine-5.0-latest
+#    restart: always
+    environment:   # The Postgres database value variable
+      DB_SERVER_HOST: mysql-server
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: zabbix
+#      ZBX_HISTORYSTORAGETYPES: log,text #Zabbix configuration variables
+      ZBX_DEBUGLEVEL: 3
+      ZBX_HOUSEKEEPINGFREQUENCY: 1
+      ZBX_MAXHOUSEKEEPERDELETE: 5000
+      ZBX_TIMEOUT: 10
+      ZBX_STARTVMWARECOLLECTORS: 0
+      ZBX_CACHESIZE: 2G
+      ZBX_HISTORYCACHESIZE: 500M
+      ZBX_HISTORYINDEXCACHESIZE: 500M
+      ZBX_TRENDCACHESIZE: 500M
+      ZBX_VALUECACHESIZE: 1G
+    depends_on:
+      - mysql-server
+#    volumes:  # Volumes for scripts and related files you can add
+#     #- /usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts #-Original
+#      - /etc/localtime:/etc/localtime:ro
+#      - /etc/timezone:/etc/timezone:ro
+#      - /usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
+#      - /usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
+#      - /var/lib/zabbix/export:/var/lib/zabbix/export:rw
+#      - /var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+#      - /var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+#      - /var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys
+#      - /var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
+    links:
+      - mysql-server
+    ports:    # Port where Zabbix proxy is available
+      - 10051:10051
+      - 443:443
+      - 25:25
+  zabbix-web:    # The main Zabbix web UI or interface
+    image: zabbix/zabbix-web-nginx-mysql:alpine-5.0-latest
+#    restart: always
+    environment:  # Postgre database variables
+      DB_SERVER_HOST: mysql-server
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: zabbix
+#      POSTGRES_USER: zabbix
+#      POSTGRES_PASSWORD: zabbix
+#      POSTGRES_DB: zabbix
+      ZBX_SERVER_HOST: zabbix-server  # Zabbix related and Php variables
+      ZBX_POSTMAXSIZE: 64M
+      PHP_TZ: "Asia/Kolkata"
+      ZBX_MAXEXECUTIONTIME: 500
+    depends_on:
+      - mysql-server
+      - zabbix-server
+    links:
+      - mysql-server
+      - zabbix-server
+    ports:    # Port where Zabbix UI is available
+      - 80:8080
+      - 389:389
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:alpine-5.0-latest
+    ports:
+     - "10060:10060"
+    volumes:
+     - /etc/localtime:/etc/localtime:ro
+     - /etc/timezone:/etc/timezone:ro
+     - ./zbx_env/etc/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d:ro
+     - ./zbx_env/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+     - ./zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+     - ./zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+    links:
+     - zabbix-server
+    labels:
+     com.zabbix.description: "Zabbix agent"
+     com.zabbix.company: "Zabbix LLC"
+     com.zabbix.component: "zabbix-agentd"
+     com.zabbix.os: "alpine"
+
+  zabbix-snmptraps:
+    image: zabbix/zabbix-snmptraps:alpine-5.0-latest
+    ports:
+     - "162:1162/udp"
+    volumes:
+     - /var/lib/zabbix/snmptraps:/var/lib/zabbix/snmptraps
+    labels:
+     com.zabbix.description: "Zabbix snmptraps"
+     com.zabbix.company: "Zabbix LLC"
+     com.zabbix.component: "snmptraps"
+     com.zabbix.os: "alpine"
+

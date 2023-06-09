@@ -1,0 +1,55 @@
+Container rutime interface change from docker to containerd.
+
+First we will change it on all worker nodes then all master nodes
+
+1.First cordon the node
+
+kubectl cordon (node name)
+
+2. drain the  node
+
+kubectl drain (node name) --ignore-daemonsets
+
+3. check which docker with docker ps 
+
+4. check which ctr
+
+   ctr namespace list
+
+5. ctr --namespace moby container list (both containers are same)
+
+6. systemctl stop kubelet
+
+7. systemctl stop docker
+
+8 vi /etc/containerd/config.toml
+
+Comment the line disabled plugin
+
+9. systemctl restart containerd
+
+10.systemctl status containerd
+
+11. vi /var/lib/kubelet/kubeadm-flags.env
+
+it will be like this
+
+KUBELET_KUBEADM_ARGS="--network-plugin=cni --pod-infra-container-image=k8s.gcr.io/pause:3.6"
+
+Edit this as
+
+KUBELET_KUBEADM_ARGS="--network-plugin=cni --pod-infra-container-image=k8s.gcr.io/pause:3.6 --container-runtime=remote --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+
+12. systemctl start kubelet
+
+13. systemctl start docker
+
+14.kubectl edit no <node-name>
+
+Change the value of kubeadm.alpha.kubernetes.io/cri-socket from /var/run/dockershim.sock to the CRI socket path unix:///run/containerd/containerd.sock
+
+15.kubectl uncordon (node name)
+
+Now we will see it as cri containerd 
+
+

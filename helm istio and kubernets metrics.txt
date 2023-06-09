@@ -1,0 +1,80 @@
+install helm
+
+
+Helm and istio
+
+
+
+kubectl create namespace istio-system
+
+helm install istio-base istio/base -n istio-system
+
+helm install istiod istio/istiod -n istio-system --wait
+
+helm status istiod -n istio-system
+
+
+------TCS----------
+
+https://istio.io/latest/docs/setup/install/istioctl/
+
+Step 1:
+wget https://github.com/goharbor/harbor/releases/download/v2.4.1/harbor-offline-installer-v2.4.1.tgz
+step 2:
+un tar the tar file 
+tar -xvzf harbor-offline-installer-v2.4.1.tgz
+step 3: 
+go to harbour dir and edit the harbour.yaml file
+step 4: 
+run the install.sh file horbour installed successfully.
+
+----------------------------------------------------------------------
+
+istio with istio-ctl
+
+1. export ISTIO_VERSION=1.14.3
+2. down load istio pkg
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.14.3 TARGET_ARCH=x86_64 sh -
+3. se path:
+export PATH="$PATH:/root/istio-${ISTIO_VERSION}/bin"
+4. Verify version
+istioctl version
+5.initialise the istio with operator choose the profile based on features of istio.  docs >config-profile istioctl install --set profile=demo -y 
+6. istio installed verify kubectl get deployment,service -n istio-system 
+7. verify the version of client control plane and data plane.
+istioctl version
+//8. deep checking
+istioctl manifest generate --set profile=demo > $HOME/istio-generatedmanifest.yml 
+9. verify ther installation with yaml istioctl verify-install -f $HOME/istio-generatedmanifest.yml Done
+
+------------------------------------------------------------------------
+
+
+in kubernetes metric server'
+
+ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+ 
+ After that edit below line
+ 
+
+spec:
+      containers:
+      - args:
+        - --cert-dir=/tmp
+        - --secure-port=4443
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        - --kubelet-use-node-status-port
+        - --metric-resolution=15s
+        - --kubelet-insecure-tls      <=======ADD IT HERE.
+        image: k8s.gcr.io/metrics-server/metrics-server:v0.6.1
+...
+
+
+
+--------------------------To create a Service--------------------------
+
+kubectl create service nodeport kiali --tcp=20001:8080,9090:8080 -n istio-system
+
+
+
+

@@ -1,0 +1,250 @@
+Zabbix Server 
+
+
+install docker
+
+install docker compose
+
+give permission to engteam user
+
+cd /app/docker-compose
+
+vi docker-compose.yml
+
+docker-compose up
+
+
+Zabbix install
+ 
+Step 1:
+ sudo wget https://repo.zabbix.com/zabbix/5.0/ubuntu/pool/main/z/zabbix/zabbix-agent2_5.0.0-1%2Bbionic_amd64.deb
+Step 2: extract files
+ sudo dpkg -i zabbix-agent2_5.0.0-1+bionic_amd64.deb
+Step 3:
+sudo systemctl stop  zabbix-agent2
+ Step 4:
+#edit config on /etc/zabbix/zabbix_agent2.conf
+sudo systemctl restart zabbix-agent2
+ Step 5:
+sudo systemctl enable zabbix-agent2
+ 
+ 
+Default Username Password
+ 
+Admin
+zabbix
+
+
+
+
+Popeye
+
+
+# Clone outside of GOPATH
+git clone https://github.com/derailed/popeye
+cd popeye
+# Build and install
+go install   or apt  install golang-go 
+# Run
+popeye
+
+
+Example to save report in working directory:
+
+  $ POPEYE_REPORT_DIR=$(pwd) popeye --save
+Example to save report in working directory in HTML format under the name "report.html" :
+
+  $ POPEYE_REPORT_DIR=$(pwd) popeye --save --out html --output-file report.html
+    
+	
+	----------------------------------------------------------------------------------------------------------------
+	
+	To install Popeye in Kubernetes, you will need to create a Kubernetes deployment and service for the Popeye container. Here are the basic steps you can follow:
+
+Create a Kubernetes deployment for the Popeye container:
+Copy code
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: popeye
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: popeye
+  template:
+    metadata:
+      labels:
+        app: popeye
+    spec:
+      containers:
+      - name: popeye
+        image: alectolytic/popeye:latest
+        args:
+        - --kube-config-path=/config/config.yaml
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: popeye-config
+Create a Kubernetes service for the Popeye deployment:
+Copy code
+apiVersion: v1
+kind: Service
+metadata:
+  name: popeye
+spec:
+  selector:
+    app: popeye
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+Create a configMap for popeye to use
+Copy code
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: popeye-config
+data:
+  config.yaml: |-
+    apiVersion: v1
+    clusters:
+    - cluster:
+        server: "https://kubernetes.default.svc"
+        certificate-authority-data: "YOUR_CA_DATA"
+    contexts:
+    - context:
+        cluster: "cluster"
+        user: "user"
+    current-context: "context"
+    kind: Config
+    preferences: {}
+    users:
+    - name: "user"
+      user:
+        token: "YOUR_TOKEN"
+Apply the above manifests by running kubectl apply -f <manifest-file>.yaml
+
+Verify the popeye pod is running by running kubectl get pods command
+
+Note: The above steps are just a basic example and may need to be customized to fit your specific use case.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Harsh reddy
+as you said popeye tool not installed
+I apologize, I misunderstood your question. To install Popeye in a Kubernetes cluster, you will first need to download the Popeye binary from the GitHub releases page (https://github.com/derailed/popeye/releases). Once you have the binary, you can run Popeye against your cluster by specifying the Kubernetes config file and the namespace you want to check.
+
+For example, to check the entire cluster and write the results to a file, you would run the following command:
+
+Copy code
+./popeye --kubeconfig ~/.kube/config --all-namespaces --output-file results.txt
+Popeye can also be run as a Kubernetes CronJob that runs periodically and sends the output to a specific email or a webhook.
+
+You can also run Popeye in a Docker container, you can use the official Popeye image available on Docker Hub by running the following command:
+
+Copy code
+docker run -v ~/.kube:/root/.kube --rm derailed/popeye --all-namespaces
+You can also use the popeye as an operator in kubernetes, it will run as a deployment and you can scale it up and down as well.
+
+Please let me know if you have any other questions or if there's anything else I can help with.
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+Harsh reddy
+popeye deployment file
+Here is an example of a Kubernetes deployment file for running Popeye as a deployment in your cluster:
+
+Copy code
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: popeye
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: popeye
+  template:
+    metadata:
+      labels:
+        app: popeye
+    spec:
+      containers:
+      - name: popeye
+        image: derailed/popeye
+        command:
+        - "popeye"
+        - "--all-namespaces"
+        volumeMounts:
+        - name: kubeconfig
+          mountPath: /root/.kube
+          readOnly: true
+      volumes:
+      - name: kubeconfig
+        configMap:
+          name: kubeconfig
+This deployment creates a single replica of the derailed/popeye container image and runs the popeye --all-namespaces command. It also mounts a configMap named kubeconfig containing the kubeconfig file as a volume in the container.
+
+This deployment runs in the kube-system namespace, you can change it as per your requirement.
+
+You can apply this deployment to your cluster by running the following command:
+
+Copy code
+kubectl apply -f popeye-deployment.yaml
+This will create a deployment named popeye in the kube-system namespace, you can scale it up and down as per your requirement.
+
+
+To create configmap for above deployment
+
+kubectl create configmap kubeconfig --from-file=.kube/config  --namespace=kube-system
+
+Please note that in this example, Popeye will check all namespaces in the cluster, you can also specify a specific namespace or multiple namespaces by replacing --all-namespaces with --namespace=mynamespace or --namespace=mynamespace1,mynamespace2.
+
+Also note that the deployment is using a configMap to mount the kubeconfig file, you can also use a secret for the same purpose.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+Harsh reddy
+after deployment how can check output
+
+After deploying the Popeye deployment, you can check the output of the tool in several ways:
+
+By using kubectl logs command: you can check the logs of the Popeye container by running the following command:
+Copy code
+kubectl logs -f -n kube-system popeye-xxxx
+By using kubectl exec command: You can also check the output by running the following command:
+Copy code
+kubectl exec -it -n kube-system popeye-xxxx -- /bin/sh
+By using popeye command: If you have installed the popeye binary on your machine, you can check the output by running the following command:
+Copy code
+popeye --kubeconfig ~/.kube/config --all-namespaces
+By using a log collector tool: You can also configure a log collector tool like fluentd or logstash to collect the logs from the popeye container and send them to a log management system like ELK stack or Splunk.
+
+By using a webhook: If you have configured a webhook in the popeye configuration, you can check the output by visiting the endpoint specified in the webhook.
+
+Please note that you will need to replace popeye-xxxx with the name of the pod running the Popeye container in your cluster.
+
+Let me know if you have any other questions or if there's anything else I can help with.
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+Popeye installation (mine)
+
+snap install popeye
+
+popeye --kubeconfig ~/.kube/config --all-namespaces
+
+popeye --kubeconfig ~/.kube/config --all-namespaces > output.txt
+
+popeye --kubeconfig ~/.kube/config --all-namespaces | tee output.html
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
