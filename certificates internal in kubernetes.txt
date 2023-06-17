@@ -8,3 +8,9 @@ To renew the certs manually
 kubeadm certs renew all
 
 You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.
+
+After renewing also if cluster not works
+
+copy the admin.conf file to the config file
+
+cp /etc/kubernetes/admin.conf /home/enggteam/.kube/config
